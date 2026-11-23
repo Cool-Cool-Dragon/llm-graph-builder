@@ -647,8 +647,7 @@ const Content: React.FC<ContentProps> = ({
         id: 2,
         modes: {
           'graph+vector+fulltext': {
-            message:
-              ' Welcome to the Neo4j Knowledge Graph Chat. You can ask questions related to documents which have been completely processed.',
+            message: ' 欢迎使用 Neo4j 知识图谱聊天。您可以询问与已完全处理的文档相关的问题。',
           },
         },
         user: 'chatbot',

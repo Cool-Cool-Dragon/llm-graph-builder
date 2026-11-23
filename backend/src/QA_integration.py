@@ -468,7 +468,7 @@ def process_chat_response(messages, history, question, model, graph, document_na
         ai_response = AIMessage(content=content)
         messages.append(ai_response)
 
-        summarization_thread = threading.Thread(target=summarize_and_log, args=(history, messages, llm, graph))
+        summarization_thread = threading.Thread(target=summarize_and_log, args=(history, messages, llm, graph, session_id))
         summarization_thread.start()
         logging.info("Summarization thread started.")
         metric_details = {"question":question,"contexts":formatted_docs,"answer":content}
@@ -509,7 +509,7 @@ def process_chat_response(messages, history, question, model, graph, document_na
             "user": "chatbot"
         }
 
-def summarize_and_log(history, stored_messages, llm, graph=None):
+def summarize_and_log(history, stored_messages, llm, graph=None, session_id=None):
     logging.info("Starting summarization in a separate thread.")
     if not stored_messages:
         logging.info("No messages to summarize.")
@@ -549,9 +549,7 @@ def summarize_and_log(history, stored_messages, llm, graph=None):
             except Exception as e:
                 logging.warning(f"Could not save to database history (driver likely closed): {e}. Falling back to local history.")
                 if session_id:
-                    local_history = SessionChatHistory.get_chat_history(session_id)
-                    local_history.add_message(HumanMessage(content="Our current conversation summary till now"))
-                    local_history.add_message(summary_message_for_db)
+                    logging.info(f"session_id: {session_id}")
 
         logging.info(f"Chat History summarized in {time.time() - start_time:.2f} seconds")
         return True
@@ -620,7 +618,7 @@ def process_graph_response(model, graph, question, messages, history, session_id
         ai_response = AIMessage(content=ai_response_content)
         
         messages.append(ai_response)
-        summarization_thread = threading.Thread(target=summarize_and_log, args=(history, messages, qa_llm, graph))
+        summarization_thread = threading.Thread(target=summarize_and_log, args=(history, messages, qa_llm, graph, session_id))
         summarization_thread.start()
         logging.info("Summarization thread started.")
         metric_details = {"question":question,"contexts":graph_response.get("context", ""),"answer":ai_response_content}

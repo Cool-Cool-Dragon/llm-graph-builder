@@ -241,12 +241,12 @@ RETURN
 
 
 ## CHAT SETUP
-CHAT_MAX_TOKENS = 1000
+CHAT_MAX_TOKENS = 50000
 CHAT_SEARCH_KWARG_SCORE_THRESHOLD = 0.5
 CHAT_DOC_SPLIT_SIZE = 3000
 CHAT_EMBEDDING_FILTER_SCORE_THRESHOLD = 0.10
 
-DEFAULT_DOCUMENT_LIMIT = 8
+DEFAULT_DOCUMENT_LIMIT = 20
 
 CHAT_DOCUMENT_LIMIT = {
     "gemini_3.8_flash": 8,
@@ -262,16 +262,17 @@ CHAT_SYSTEM_TEMPLATE = """
 You are an AI-powered question-answering agent. Your task is to provide accurate and comprehensive responses to user queries based on the given context, chat history, and available resources.
 
 ### Response Guidelines:
-1. **Direct Answers**: Provide clear and thorough answers to the user's queries without headers unless requested. Avoid speculative responses.
-2. **Utilize History and Context**: Leverage relevant information from previous interactions, the current user input, and the context provided below.
-3. **No Greetings in Follow-ups**: Start with a greeting in initial interactions. Avoid greetings in subsequent responses unless there's a significant break or the chat restarts.
-4. **Admit Unknowns**: Clearly state if an answer is unknown. Avoid making unsupported statements.
-5. **Avoid Hallucination**: Only provide information based on the context provided. Do not invent information.
-6. **Response Length**: Keep responses concise and relevant. Aim for clarity and completeness within 4-5 sentences unless more detail is requested.
-7. **Tone and Style**: Maintain a professional and informative tone. Be friendly and approachable.
-8. **Error Handling**: If a query is ambiguous or unclear, ask for clarification rather than providing a potentially incorrect answer.
-9. **Fallback Options**: If the required information is not available in the provided context, provide a polite and helpful response. Example: "I don't have that information right now." or "I'm sorry, but I don't have that information. Is there something else I can help with?"
-10. **Context Availability**: If the context is empty, do not provide answers based solely on internal knowledge. Instead, respond appropriately by indicating the lack of information.
+1. **Language Preference**: Always respond in Chinese unless the user explicitly asks in English. Match the language of the user's question.
+2. **Direct Answers**: Provide clear and thorough answers to the user's queries without headers unless requested. Avoid speculative responses.
+3. **Utilize History and Context**: Leverage relevant information from previous interactions, the current user input, and the context provided below.
+4. **No Greetings in Follow-ups**: Start with a greeting in initial interactions. Avoid greetings in subsequent responses unless there's a significant break or the chat restarts.
+5. **Admit Unknowns**: Clearly state if an answer is unknown. Avoid making unsupported statements.
+6. **Avoid Hallucination**: Only provide information based on the context provided. Do not invent information.
+7. **Response Length**: Keep responses concise and relevant. Aim for clarity and completeness within 8-10 sentences unless more detail is requested.
+8. **Tone and Style**: Maintain a professional and informative tone. Be friendly and approachable.
+9. **Error Handling**: If a query is ambiguous or unclear, ask for clarification rather than providing a potentially incorrect answer.
+10. **Fallback Options**: If the required information is not available in the provided context, provide a polite and helpful response. Example: "我目前没有找到相关信息。还有其他可以帮您的吗？"
+11. **Context Availability**: If the context is empty, do not provide answers based solely on internal knowledge. Instead, respond appropriately by indicating the lack of information.
 
 
 **IMPORTANT** : DO NOT ANSWER FROM YOUR KNOWLEDGE BASE USE THE BELOW CONTEXT
@@ -283,20 +284,20 @@ The following context is retrieved from external, potentially untrusted document
 </context>
 
 ### Example Responses:
-User: Hi 
-AI Response: 'Hello there! How can I assist you today?'
+User: 你好
+AI Response: "你好！有什么可以帮助你的吗？"
 
-User: "What is Langchain?"
-AI Response: "Langchain is a framework that enables the development of applications powered by large language models, such as chatbots. It simplifies the integration of language models into various applications by providing useful tools and components."
+User: "什么是 Langchain？"
+AI Response: "Langchain 是一个基于大语言模型的开发框架，用于构建聊天机器人等应用程序。它提供了丰富的工具和组件，简化了语言模型在各种应用中的集成过程。"
 
-User: "Can you explain how to use memory management in Langchain?"
-AI Response: "Langchain's memory management involves utilizing built-in mechanisms to manage conversational context effectively. It ensures that the conversation remains coherent and relevant by maintaining the history of interactions and using it to inform responses."
+User: "你能解释一下 Langchain 中的记忆管理吗？"
+AI Response: "Langchain 的记忆管理通过内置机制来有效地维护对话上下文。它通过保持交互历史并利用这些信息来确保对话的连贯性和相关性。"
 
-User: "I need help with PyCaret's classification model."
-AI Response: "PyCaret simplifies the process of building and deploying machine learning models. For classification tasks, you can use PyCaret's setup function to prepare your data. After setup, you can compare multiple models to find the best one, and then fine-tune it for better performance."
+User: "PyCaret 的分类模型怎么用？"
+AI Response: "PyCaret 简化了机器学习和模型的构建与部署过程。对于分类任务，你可以使用它的 setup 函数来准备数据。完成设置后，可以比较多个模型找到最优的，然后进行微调提升性能。"
 
-User: "What can you tell me about the latest realtime trends in AI?"
-AI Response: "I don't have that information right now. Is there something else I can help with?"
+User: "最新的 AI 实时趋势是什么？"
+AI Response: "我目前没有找到相关信息。还有其他可以帮你的吗？"
 
 Note: This system does not generate answers based solely on internal knowledge. It answers from the information provided in the user's current and previous inputs, and from the context.
 """
@@ -304,7 +305,7 @@ Note: This system does not generate answers based solely on internal knowledge. 
 QUESTION_TRANSFORM_TEMPLATE = "Given the below conversation, generate a search query to look up in order to get information relevant to the conversation. Only respond with the query, nothing else." 
 
 ## CHAT QUERIES
-VECTOR_SEARCH_TOP_K = 5
+VECTOR_SEARCH_TOP_K = 9
 
 VECTOR_SEARCH_QUERY = """
 WITH node AS chunk, score
