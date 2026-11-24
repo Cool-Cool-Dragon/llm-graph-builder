@@ -437,7 +437,9 @@ async def chat_bot(
     qa_rag_start_time = time.time()
     try:
         if mode == "graph":
-            graph = Neo4jGraph(url=credentials.uri, username=credentials.userName, password=credentials.password, database=credentials.database, sanitize=True, refresh_schema=True)
+            graph = create_graph_database_connection(credentials)
+            # Force refresh of schema for graph mode
+            graph.refresh_schema()
         else:
             graph = create_graph_database_connection(credentials)
         

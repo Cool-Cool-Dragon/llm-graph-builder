@@ -9,12 +9,13 @@ import requests
 from src.entities.user_credential import Neo4jCredentials
 from transformers import AutoTokenizer, AutoModel
 from langchain_huggingface import HuggingFaceEmbeddings
-from threading import Lock
+from threading import Lock, RLock
 from urllib.parse import urlparse,parse_qs
 from src.shared.llm_graph_builder_exception import LLMGraphBuilderException
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_neo4j import Neo4jGraph
+from neo4j import GraphDatabase
 from neo4j.exceptions import TransientError
 from langchain_community.graphs.graph_document import GraphDocument
 from typing import List
@@ -212,10 +213,51 @@ def get_chunk_and_graphDocument(graph_document_list, chunkId_chunkDoc_list):
           for chunk_id in graph_document.source.metadata['combined_chunk_ids'] :
             lst_chunk_chunkId_document.append({'graph_doc':graph_document,'chunk_id':chunk_id})
                   
-  return lst_chunk_chunkId_document  
-                 
+  return lst_chunk_chunkId_document
+
+# Global Neo4j driver pool cache: key -> (driver, ref_count)
+# Key is a hashable tuple (uri, database) to share connection pool across users with same DB
+_neo4j_driver_cache: dict = {}
+_neo4j_driver_lock = RLock()
+
+
+class _PooledNeo4jGraph(Neo4jGraph):
+    """Subclass of Neo4jGraph with a no-op __del__ so the pooled driver
+    is not accidentally closed when a short-lived wrapper is garbage-collected."""
+    def __del__(self) -> None:
+        pass
+
+
+def _driver_cache_key(credentials) -> tuple:
+    """Generate a unique key for driver caching based on database identity."""
+    return (credentials.uri, credentials.database or "neo4j")
+
+
 def create_graph_database_connection(credentials):
-    graph = Neo4jGraph(url=credentials.uri, database=credentials.database, username=credentials.userName, password=credentials.password, refresh_schema=False, sanitize=True)    
+    key = _driver_cache_key(credentials)
+    with _neo4j_driver_lock:
+        if key in _neo4j_driver_cache:
+            driver, _ = _neo4j_driver_cache[key]
+        else:
+            auth = (credentials.userName, credentials.password)
+            driver = GraphDatabase.driver(
+                credentials.uri,
+                auth=auth,
+                max_connection_pool_size=50,
+                connection_acquisition_timeout=300,
+                keep_alive=True,
+            )
+            _neo4j_driver_cache[key] = (driver, 1)
+
+    # Create a pooled wrapper and inject the cached driver.
+    graph = object.__new__(_PooledNeo4jGraph)
+    graph._driver = driver
+    graph._database = credentials.database or "neo4j"
+    graph.timeout = None
+    graph.sanitize = True
+    graph._enhanced_schema = False
+    graph.schema = ""
+    graph.structured_schema = {}
     return graph
 
 
