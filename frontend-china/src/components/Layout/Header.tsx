@@ -1,0 +1,310 @@
+import {
+  MoonIconOutline,
+  SunIconOutline,
+  CodeBracketSquareIconOutline,
+  InformationCircleIconOutline,
+  ArrowTopRightOnSquareIconOutline,
+  TrashIconOutline,
+  ArrowLeftIconOutline,
+  ArrowDownTrayIconOutline,
+} from '@neo4j-ndl/react/icons';
+import { Button, SpotlightTarget, TextLink, useSpotlightContext } from '@neo4j-ndl/react';
+import { useCallback, useContext, useEffect, useRef, useState, useMemo } from 'react';
+import { IconButtonWithToolTip } from '../UI/IconButtonToolTip';
+import { buttonCaptions, SKIP_AUTH, tooltips, URLS } from '../../utils/Constants';
+import { ThemeWrapperContext } from '../../context/ThemeWrapper';
+import { useCredentials } from '../../context/UserCredentials';
+import { useLocation, useNavigate } from 'react-router';
+import { useMessageContext } from '../../context/UserMessages';
+import { RiChatSettingsLine } from 'react-icons/ri';
+import ChatModeToggle from '../ChatBot/ChatModeToggle';
+import { HeaderProp } from '../../types';
+import { downloadClickHandler, getIsLoading } from '../../utils/Utils';
+import Profile from '../User/Profile';
+import { useAuth0 } from '@auth0/auth0-react';
+
+const Header: React.FC<HeaderProp> = ({ chatOnly, deleteOnClick, setOpenConnection, showBackButton }) => {
+  const { colorMode, toggleColorMode } = useContext(ThemeWrapperContext);
+  const navigate = useNavigate();
+  const { messages } = useMessageContext();
+  const handleURLClick = useCallback((url: string) => {
+    window.open(url, '_blank');
+  }, []);
+  const downloadLinkRef = useRef<HTMLAnchorElement>(null);
+  const { loginWithRedirect, isAuthenticated } = useAuth0();
+  const firstTourTarget = useRef<HTMLDivElement>(null);
+  const { connectionStatus, showDisconnectButton, setConnectionStatus, setUserCredentials, setShowDisconnectButton } =
+    useCredentials();
+  const chatOnlyDisconnect = useCallback(() => {
+    setConnectionStatus(false);
+    setShowDisconnectButton(false);
+    setUserCredentials({ uri: '', password: '', userName: '', database: '', email: '' });
+    localStorage.removeItem('neo4j.connection');
+    if (setOpenConnection) {
+      setOpenConnection((prev) => ({ ...prev, openPopUp: true }));
+    }
+  }, [setConnectionStatus, setUserCredentials, setShowDisconnectButton, setOpenConnection]);
+  const chatAnchor = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+  const [showChatModeOption, setShowChatModeOption] = useState<boolean>(false);
+  const { setIsOpen } = useSpotlightContext();
+  const isFirstTimeUser = useMemo(() => {
+    return localStorage.getItem('neo4j.connection') === null;
+  }, []);
+  useEffect(() => {
+    if (!connectionStatus && isFirstTimeUser) {
+      setIsOpen(true);
+    }
+  }, []);
+  const openChatPopout = useCallback(() => {
+    let session = localStorage.getItem('neo4j.connection');
+    const isLoading = getIsLoading(messages);
+    if (session) {
+      const neo4jConnection = JSON.parse(session);
+      const { uri, userName, password, database } = neo4jConnection;
+      const [, port] = uri.split(':');
+      const encodedPassword = btoa(password);
+      const chatUrl = `/chat-only?uri=${encodeURIComponent(
+        uri
+      )}&user=${userName}&password=${encodedPassword}&database=${database}&port=${port}&connectionStatus=${connectionStatus}`;
+      navigate(chatUrl, { state: { messages, isLoading } });
+    } else if (connectionStatus) {
+      const chatUrl = `/chat-only?connectionStatus=${connectionStatus}`;
+      navigate(chatUrl, { state: { messages, isLoading } });
+    } else {
+      const chatUrl = `/chat-only?openModal=true`;
+      window.open(chatUrl, '_blank');
+    }
+  }, [messages, connectionStatus, navigate]);
+
+  const onBackButtonClick = () => {
+    navigate('/', { state: messages });
+  };
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const headerEl = headerRef.current;
+    if (!headerEl) {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--header-height', `${headerEl.offsetHeight}px`);
+    });
+    observer.observe(headerEl);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--header-height');
+    };
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={headerRef}
+        className='n-bg-palette-neutral-bg-weak p-1'
+        style={{ borderBottom: '2px solid rgb(var(--theme-palette-neutral-border-weak))' }}
+      >
+        <nav
+          className='flex flex-wrap items-center justify-between flex-row'
+          role='navigation'
+          data-testid='navigation'
+          id='navigation'
+          aria-label='main navigation'
+        >
+
+          {!chatOnly ? (
+            <section className='items-center justify-end w-auto shrink-0 flex'>
+              <div>
+                <div
+                  className='inline-flex gap-x-1'
+                  style={{ display: 'flex', flexGrow: 0, alignItems: 'center', gap: '4px' }}
+                >
+                  <IconButtonWithToolTip
+                    text={tooltips.documentation}
+                    onClick={() => handleURLClick(URLS.DOCUMENTATION)}
+                    size='large'
+                    clean
+                    placement='left'
+                    label={tooltips.documentation}
+                  >
+                    <InformationCircleIconOutline className='n-size-token-7' />
+                  </IconButtonWithToolTip>
+
+                  <IconButtonWithToolTip
+                    label={tooltips.github}
+                    onClick={() => handleURLClick(URLS.GITHUB_ISSUES)}
+                    text={tooltips.github}
+                    size='large'
+                    clean
+                  >
+                    <CodeBracketSquareIconOutline />
+                  </IconButtonWithToolTip>
+                  <IconButtonWithToolTip
+                    label={tooltips.theme}
+                    text={tooltips.theme}
+                    clean
+                    size='large'
+                    onClick={toggleColorMode}
+                    placement='left'
+                  >
+                    {colorMode === 'dark' ? (
+                      <span role='img' aria-label='sun'>
+                        <SunIconOutline />
+                      </span>
+                    ) : (
+                      <span role='img' aria-label='moon'>
+                        <MoonIconOutline />
+                      </span>
+                    )}
+                  </IconButtonWithToolTip>
+                  <IconButtonWithToolTip
+                    label={tooltips.openChatPopout}
+                    onClick={openChatPopout}
+                    text={tooltips.openChatPopout}
+                    size='large'
+                    clean
+                    disabled={getIsLoading(messages)}
+                  >
+                    <ArrowTopRightOnSquareIconOutline />
+                  </IconButtonWithToolTip>
+                  {!SKIP_AUTH && <Profile />}
+                  {pathname === '/readonly' &&
+                    !isAuthenticated &&
+                    (!connectionStatus ? (
+                      <SpotlightTarget id='loginbutton' hasPulse={true} indicatorVariant='border' ref={firstTourTarget}>
+                        <Button type='button' fill='outlined' onClick={() => loginWithRedirect()}>
+                          登录
+                        </Button>
+                      </SpotlightTarget>
+                    ) : (
+                      <Button type='button' fill='outlined' onClick={() => loginWithRedirect()}>
+                        登录
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className='items-center justify-end w-auto shrink-0 flex'>
+              <div
+                className='inline-flex gap-x-1'
+                style={{ display: 'flex', flexGrow: 0, alignItems: 'center', gap: '4px' }}
+              >
+                {!connectionStatus ? (
+                  <Button
+                    size={'medium'}
+                    className={`${chatOnly ? '' : 'mr-2.5'}`}
+                    onClick={() => {
+                      if (setOpenConnection) {
+                        setOpenConnection((prev) => ({ ...prev, openPopUp: true }));
+                      }
+                    }}
+                  >
+                    {buttonCaptions.connectToNeo4j}
+                  </Button>
+                ) : (
+                  showDisconnectButton && (
+                    <Button size={'medium'} className='mr-2.5' onClick={chatOnlyDisconnect}>
+                      {buttonCaptions.disconnect}
+                    </Button>
+                  )
+                )}
+                {showBackButton && (
+                  <IconButtonWithToolTip
+                    onClick={onBackButtonClick}
+                    clean
+                    text='返回'
+                    placement='bottom'
+                    label='返回'
+                    disabled={getIsLoading(messages)}
+                  >
+                    <ArrowLeftIconOutline />
+                  </IconButtonWithToolTip>
+                )}
+                <IconButtonWithToolTip
+                  label={tooltips.theme}
+                  text={tooltips.theme}
+                  clean
+                  size='large'
+                  onClick={toggleColorMode}
+                  placement='bottom'
+                >
+                  {colorMode === 'dark' ? (
+                    <span role='img' aria-label='sun'>
+                      <SunIconOutline />
+                    </span>
+                  ) : (
+                    <span role='img' aria-label='moon'>
+                      <MoonIconOutline />
+                    </span>
+                  )}
+                </IconButtonWithToolTip>
+                <div ref={chatAnchor}>
+                  <IconButtonWithToolTip
+                    onClick={() => {
+                      setShowChatModeOption(true);
+                    }}
+                    clean
+                    text='聊天模式'
+                    placement='bottom'
+                    label='聊天模式'
+                    disabled={!connectionStatus}
+                  >
+                    <RiChatSettingsLine />
+                  </IconButtonWithToolTip>
+                </div>
+                <>
+                  <IconButtonWithToolTip
+                    text={tooltips.downloadChat}
+                    aria-label='下载对话'
+                    clean
+                    onClick={() =>
+                      downloadClickHandler(
+                        { conversation: messages },
+                        downloadLinkRef,
+                        'graph-builder-conversation.json'
+                      )
+                    }
+                    disabled={!connectionStatus || messages.length === 1 || getIsLoading(messages)}
+                    placement={chatOnly ? 'left' : 'bottom'}
+                    label={tooltips.downloadChat}
+                  >
+                    <span ref={downloadLinkRef}></span>
+                    <ArrowDownTrayIconOutline />
+                  </IconButtonWithToolTip>
+                  <>
+                    <TextLink ref={downloadLinkRef} className='hidden!'>
+                      ""
+                    </TextLink>
+                  </>
+                </>
+                <IconButtonWithToolTip
+                  text={tooltips.clearChat}
+                  aria-label='清除聊天记录'
+                  clean
+                  onClick={deleteOnClick}
+                  disabled={!connectionStatus || messages.length === 1 || getIsLoading(messages)}
+                  placement={chatOnly ? 'left' : 'bottom'}
+                  label={tooltips.clearChat}
+                >
+                  <TrashIconOutline />
+                </IconButtonWithToolTip>
+              </div>
+            </section>
+          )}
+        </nav>
+      </div>
+      <ChatModeToggle
+        closeHandler={(_, reason) => {
+          if (reason.type === 'backdropClick') {
+            setShowChatModeOption(false);
+          }
+        }}
+        open={showChatModeOption}
+        menuAnchor={chatAnchor}
+        isRoot={false}
+      />
+    </>
+  );
+};
+export default Header;

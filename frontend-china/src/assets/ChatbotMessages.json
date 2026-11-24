@@ -1,0 +1,15 @@
+{
+  "listMessages": [
+    {
+      "id": 2,
+      "modes":{
+        "graph+vector+fulltext":{
+          "message": " 欢迎使用知识图谱对话。您可以询问与已完全处理的文档相关的问题。"
+        }
+      },
+      "user": "chatbot",
+      "datetime": "01/01/2024 00:00:00",
+      "currentMode":"graph+vector+fulltext"
+    }
+  ]
+}
